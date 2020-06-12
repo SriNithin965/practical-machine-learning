@@ -1,0 +1,104 @@
+---
+title: "Practical Machine Learning Project"
+author: "Srinithin"
+date: "6/11/2020"
+output: html_document
+---
+
+Introduction
+------------
+
+Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement – a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it.  
+
+In this project, we will use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants to predict the manner in which they did the exercise.
+
+## Downloading the data
+
+```{r}
+ dir.create("./data")
+download.file("https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv",
+              destfile= "./data/training.csv")
+download.file("https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv",
+              destfile="./data/testing.csv")
+```
+
+## reading the data
+```{r}
+train <- read.csv("data/training.csv")
+test <- read.csv("data/testing.csv")
+```
+
+## cleaning the data
+
+#### IN this I removed everything execpt the accelerometers in both train and test data.
+```{r}
+sub <- grepl("^accel", names(train))
+trainc <- subset(train,select = sub)
+testc <- subset(test,select=sub)
+trainc['classe'] <- train['classe']
+testc['problem_id'] <- test['problem_id']
+```
+
+## dividing the train data
+
+```{r}
+library('lattice')
+library('ggplot2')
+library('caret')
+inTrain <- createDataPartition(trainc$classe, p=0.70, list=F)
+trainData <- trainc[inTrain, ]
+testData <- trainc[-inTrain, ]
+```
+
+## Data Modeling
+
+#### IN this I used the classifier is "Random forest".
+```{r}
+modelRf <- train(classe ~ ., data=trainData, method="rf")
+modelRf
+```
+
+## validating the data
+
+```{r}
+predictRf <- predict(modelRf, testData)
+confusionMatrix(testData$classe, predictRf)
+```
+
+#### the accuracy calculation
+```{r}
+accuracy <- postResample(predictRf, testData$classe)
+accuracy
+```
+
+#### the sample error calculation
+```{r}
+oose <- 1 - as.numeric(confusionMatrix(testData$classe, predictRf)$overall[1])
+oose
+```
+
+## now apply on the test data and predicting the 20 cases.
+
+```{r}
+result <- predict(modelRf, testc[, -length(names(testc))])
+result
+```
+
+## Appendix
+
+
+## 1. Correlation Matrix Visualization  
+
+```{r}
+library(corrplot)
+library(rpart.plot)
+corrPlot <- cor(trainData[, -length(names(trainData))])
+corrplot(corrPlot, method="color")
+```
+
+## 2. Tree Visualization  
+
+```{r}
+treeModel <- rpart(classe ~ ., data=trainData, method="class")
+prp(treeModel) # fast plot
+```
